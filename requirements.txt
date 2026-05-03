@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+pandas
+numpy
+scipy
+scikit-learn
+reportlab
+python-dotenv
+python-multipart
+aiofiles
+google-genai
+anthropic
+groq
+sqlalchemy
+jinja2
+openpyxl
+cryptography

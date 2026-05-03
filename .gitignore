@@ -1,0 +1,29 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Virtual environments
+.venv/
+.venv-1/
+
+# Local app data
+datalens.db
+*.db
+data/*.db
+data/uploads/*
+data/reports/*
+!data/uploads/.gitkeep
+!data/reports/.gitkeep
+
+# Runtime logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

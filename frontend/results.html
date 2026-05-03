@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DataLens Dictionary</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #111214;
+      --paper: #f7f3ea;
+      --cream: #fffaf0;
+      --line: rgba(17, 18, 20, .13);
+      --muted: #6b665e;
+      --cyan: #00a6c8;
+      --lime: #a7d129;
+      --coral: #ff6b4a;
+      --violet: #7c5cff;
+      --gold: #f6b73c;
+      --danger: #d93f3f;
+      --shadow: 0 28px 76px rgba(17, 18, 20, .16);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(120deg, rgba(0,166,200,.12), transparent 34%),
+        linear-gradient(315deg, rgba(255,107,74,.12), transparent 34%),
+        var(--paper);
+      color: var(--ink);
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+    #mesh {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      opacity: .34;
+      pointer-events: none;
+    }
+    .app {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 272px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 22px;
+      border-right: 1px solid var(--line);
+      background: rgba(255,250,240,.78);
+      backdrop-filter: blur(24px) saturate(145%);
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 22px;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 900;
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .logo b {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      background: var(--ink);
+      color: var(--cream);
+      box-shadow: 0 18px 38px rgba(17,18,20,.22);
+    }
+    .dataset-name {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255,255,255,.46);
+      animation: enterLeft 600ms cubic-bezier(.2,.8,.2,1) both;
+    }
+    .dataset-name span {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 900;
+    }
+    .dataset-name strong {
+      display: block;
+      overflow-wrap: anywhere;
+      line-height: 1.2;
+    }
+    .tabs {
+      display: grid;
+      gap: 9px;
+      align-content: start;
+    }
+    button {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255,250,240,.72);
+      color: var(--ink);
+      cursor: pointer;
+      font: inherit;
+      font-weight: 850;
+      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px rgba(17,18,20,.1);
+    }
+    .tab {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      text-align: left;
+      padding: 12px 14px;
+      color: #454039;
+    }
+    .tab.active {
+      color: var(--cream);
+      background: var(--ink);
+      box-shadow: 0 18px 42px rgba(17,18,20,.24);
+    }
+    .tab i {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--cyan);
+    }
+    .exports {
+      display: grid;
+      gap: 9px;
+    }
+    .exports button:nth-child(1) { background: var(--coral); border-color: var(--coral); color: #1f100b; }
+    .exports button:nth-child(2) { background: var(--lime); border-color: var(--lime); color: #182005; }
+    .exports button:nth-child(3) { background: var(--cyan); border-color: var(--cyan); color: #052026; }
+    main {
+      min-width: 0;
+      padding: 28px clamp(18px, 3vw, 44px) 48px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+    .headline {
+      animation: floatIn 620ms cubic-bezier(.2,.8,.2,1) both;
+    }
+    .kicker {
+      color: #575149;
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 8px 0 0;
+      font-size: clamp(38px, 6vw, 78px);
+      line-height: .9;
+      font-weight: 900;
+    }
+    .stat-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    .stat-pill {
+      min-width: 126px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255,250,240,.76);
+      backdrop-filter: blur(16px);
+      animation: chipRise 560ms cubic-bezier(.2,.8,.2,1) both;
+    }
+    .stat-pill span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+    .stat-pill strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 24px;
+    }
+    .view { display: none; }
+    .view.active { display: block; animation: viewIn 360ms ease both; }
+    .column-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 16px;
+    }
+    .column-card,
+    .panel,
+    .query-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255,250,240,.82);
+      box-shadow: 0 12px 34px rgba(17,18,20,.08);
+      backdrop-filter: blur(18px);
+    }
+    .column-card {
+      position: relative;
+      overflow: hidden;
+      padding: 18px;
+      min-height: 244px;
+      transition: transform 210ms ease, box-shadow 210ms ease, border-color 210ms ease;
+      animation: cardIn 520ms cubic-bezier(.2,.8,.2,1) both;
+    }
+    .column-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 5px;
+      background: linear-gradient(90deg, var(--cyan), var(--lime), var(--coral));
+      transform: scaleX(.35);
+      transform-origin: left;
+      transition: transform 240ms ease;
+    }
+    .column-card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(0,166,200,.42);
+      box-shadow: var(--shadow);
+    }
+    .column-card:hover::before { transform: scaleX(1); }
+    .column-card h2 {
+      margin: 6px 0 12px;
+      font-size: 22px;
+      line-height: 1.12;
+      overflow-wrap: anywhere;
+    }
+    [contenteditable="true"] {
+      outline: none;
+      border-radius: 6px;
+    }
+    [contenteditable="true"]:focus {
+      box-shadow: 0 0 0 4px rgba(0,166,200,.15);
+      background: rgba(255,255,255,.62);
+    }
+    .badge {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 900;
+      color: #1d1a15;
+      background: rgba(17,18,20,.08);
+    }
+    .badge::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .confirmed { color: #3b6b00; background: rgba(167,209,41,.26); }
+    .review { color: #815005; background: rgba(246,183,60,.3); }
+    .single, .fallback { color: #5a554d; background: rgba(17,18,20,.08); }
+    .badge:hover::after {
+      content: attr(data-hover);
+      position: absolute;
+      left: 0;
+      top: 34px;
+      z-index: 10;
+      width: min(310px, 78vw);
+      padding: 12px;
+      border-radius: 8px;
+      background: #111214;
+      color: var(--cream);
+      line-height: 1.45;
+      box-shadow: 0 18px 46px rgba(17,18,20,.28);
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 14px 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .meta span {
+      padding: 7px 9px;
+      border-radius: 999px;
+      background: rgba(17,18,20,.06);
+    }
+    .description {
+      min-height: 58px;
+      color: #332f29;
+      line-height: 1.5;
+    }
+    .banner {
+      margin-top: 13px;
+      border-radius: 8px;
+      padding: 11px 12px;
+      font-size: 13px;
+      font-weight: 750;
+      line-height: 1.35;
+    }
+    .banner.amber { background: rgba(246,183,60,.27); color: #6f4400; }
+    .banner.red { background: rgba(217,63,63,.15); color: #9f1d1d; }
+    .verify-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0 0;
+    }
+    .verify-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: rgba(0,166,200,.14);
+      color: #075466;
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+    .verify-pill::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 0 5px rgba(0,166,200,.11);
+    }
+    .verify-pill.warn {
+      background: rgba(246,183,60,.25);
+      color: #6f4400;
+    }
+    .verify-pill.warn::before { background: var(--gold); }
+    .panel {
+      padding: 20px;
+      overflow: auto;
+    }
+    table {
+      width: 100%;
+      min-width: 720px;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+    tr {
+      transition: background 160ms ease;
+    }
+    tbody tr:hover { background: rgba(255,255,255,.44); }
+    tr.highlight td { background: rgba(246,183,60,.22); }
+    .overview {
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .score-card {
+      padding: 24px;
+      border-radius: 8px;
+      background: #111214;
+      color: var(--cream);
+      box-shadow: var(--shadow);
+      animation: scorePop 620ms cubic-bezier(.2,.8,.2,1) both;
+    }
+    .score {
+      font-size: 92px;
+      line-height: .82;
+      font-weight: 900;
+    }
+    .grade {
+      display: inline-flex;
+      margin: 18px 0;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--lime);
+      color: #162004;
+      font-weight: 900;
+    }
+    .score-card p {
+      color: rgba(255,250,240,.78);
+      line-height: 1.55;
+    }
+    .score-card li {
+      margin: 9px 0;
+      color: rgba(255,250,240,.82);
+    }
+    .query-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+    }
+    .query-card {
+      padding: 18px;
+      animation: cardIn 520ms cubic-bezier(.2,.8,.2,1) both;
+    }
+    .query-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+    .query-card strong {
+      display: block;
+      font-size: 17px;
+      line-height: 1.35;
+    }
+    pre {
+      margin: 8px 0 0;
+      padding: 12px;
+      overflow-x: auto;
+      border-radius: 8px;
+      background: rgba(17,18,20,.88);
+      color: var(--cream);
+      font: 12px/1.5 "Cascadia Code", Consolas, monospace;
+    }
+    .empty {
+      padding: 22px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      background: rgba(255,250,240,.78);
+    }
+    @keyframes enterLeft { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes floatIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes chipRise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes viewIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes cardIn { from { opacity: 0; transform: translateY(18px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes scorePop { from { opacity: 0; transform: translateY(22px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    }
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+      aside {
+        position: relative;
+        height: auto;
+        grid-template-rows: auto;
+      }
+      .tabs, .exports { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .dataset-name { display: none; }
+      .overview { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 680px) {
+      aside { padding: 16px; }
+      .tabs, .exports { grid-template-columns: 1fr; }
+      .topbar { flex-direction: column; }
+      .stat-strip { justify-content: flex-start; }
+      main { padding: 18px 14px 36px; }
+      h1 { font-size: clamp(36px, 13vw, 56px); }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="mesh" aria-hidden="true"></canvas>
+  <div class="app">
+    <aside>
+      <a class="logo" href="/"><b>DL</b><span>DataLens Studio</span></a>
+      <div class="dataset-name">
+        <span>Active dataset</span>
+        <strong id="sideTitle">No dataset loaded</strong>
+      </div>
+      <nav class="tabs" aria-label="Result tabs">
+        <button class="tab active" data-tab="columns">Columns <i></i></button>
+        <button class="tab" data-tab="relationships">Relations <i></i></button>
+        <button class="tab" data-tab="overview">Overview <i></i></button>
+      </nav>
+      <div class="exports">
+        <button data-export="pdf">PDF</button>
+        <button data-export="excel">Excel</button>
+        <button data-export="json">JSON</button>
+      </div>
+    </aside>
+    <main>
+      <section class="topbar">
+        <div class="headline">
+          <div class="kicker">Editable intelligent dictionary | Gemini drafted, Groq verified</div>
+          <h1 id="title">DataLens Results</h1>
+        </div>
+        <div class="stat-strip" id="statStrip"></div>
+      </section>
+      <section id="columns" class="view active"><div id="columnGrid" class="column-grid"></div></section>
+      <section id="relationships" class="view"><div id="relationshipsTable" class="panel"></div></section>
+      <section id="overview" class="view"><div id="overviewPanel" class="overview"></div></section>
+    </main>
+  </div>
+  <script>
+    let state = JSON.parse(sessionStorage.getItem("datalensResult") || localStorage.getItem("datalensResult") || "null");
+
+    function confidenceClass(value) {
+      if (value === "Confirmed") return "confirmed";
+      if (value === "Review needed") return "review";
+      if (value === "Single model") return "single";
+      return "fallback";
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
+      }[char]));
+    }
+
+    function persist() {
+      sessionStorage.setItem("datalensResult", JSON.stringify(state));
+    }
+
+    function renderStats() {
+      const meta = state.metadata || {};
+      const readiness = state.readiness || {};
+      document.getElementById("statStrip").innerHTML = `
+        <div class="stat-pill"><span>Rows</span><strong>${escapeHtml(meta.row_count ?? 0)}</strong></div>
+        <div class="stat-pill"><span>Columns</span><strong>${escapeHtml(meta.column_count ?? 0)}</strong></div>
+        <div class="stat-pill"><span>Readiness</span><strong>${escapeHtml(readiness.score ?? 0)}</strong></div>
+      `;
+    }
+
+    function renderColumns() {
+      const grid = document.getElementById("columnGrid");
+      grid.innerHTML = (state.profiles || []).map((profile, index) => {
+        const flag = profile.fairness_flag;
+        const groq = flag && flag.groq_verification;
+        const groqVerdict = groq ? `${groq.verdict || "Uncertain"} by Groq` : "";
+        return `
+          <article class="column-card" style="animation-delay:${Math.min(index * 35, 420)}ms">
+            <span class="badge ${confidenceClass(profile.confidence)}" data-hover="${escapeHtml(profile.groq_description || "No alternative description available.")}">${escapeHtml(profile.confidence || "Fallback")}</span>
+            <h2 contenteditable="true" data-index="${index}" data-field="display_name">${escapeHtml(profile.display_name || profile.column_name)}</h2>
+            <div class="meta">
+              <span>${escapeHtml(profile.dtype)}</span>
+              <span>${escapeHtml(profile.null_pct)}% null</span>
+              <span>${escapeHtml(profile.unique_count)} unique</span>
+            </div>
+            <div class="description" contenteditable="true" data-index="${index}" data-field="description">${escapeHtml(profile.description || "")}</div>
+            ${flag ? `<div class="verify-strip"><span class="verify-pill ${flag.verification_status === "Confirmed" ? "" : "warn"}">${escapeHtml(groqVerdict || "Groq verification pending")}</span></div>` : ""}
+            ${profile.anomaly_note ? `<div class="banner amber">${escapeHtml(profile.anomaly_note)}</div>` : ""}
+            ${flag && (flag.is_sensitive || flag.is_proxy) ? `<div class="banner red">${escapeHtml(flag.eu_ai_act_article || "EU AI Act")} ${flag.review_only ? "Review warning:" : ""} ${escapeHtml(flag.reason || "")}</div>` : ""}
+            ${groq ? `<div class="banner amber">Groq verification: ${escapeHtml(groq.reason || "")}</div>` : ""}
+          </article>
+        `;
+      }).join("");
+    }
+
+    function renderRelationships() {
+      const relationshipRows = (state.relationships || []).map(rel => `
+        <tr class="${Math.abs(Number(rel.correlation || 0)) > 0.9 ? "highlight" : ""}">
+          <td>${escapeHtml(rel.col_a)}</td>
+          <td>${escapeHtml(rel.col_b)}</td>
+          <td>${escapeHtml(rel.correlation)}</td>
+          <td>${escapeHtml(rel.type)}</td>
+          <td>${escapeHtml(rel.note)}</td>
+        </tr>
+      `).join("");
+      const redundantRows = (state.redundant_columns || []).map(rel => `
+        <tr class="highlight">
+          <td>${escapeHtml(rel.col_a)}</td>
+          <td>${escapeHtml(rel.col_b)}</td>
+          <td>${escapeHtml(rel.match_pct)}% match</td>
+          <td>Near duplicate</td>
+          <td>${escapeHtml(rel.note)}</td>
+        </tr>
+      `).join("");
+      const rows = relationshipRows + redundantRows;
+      document.getElementById("relationshipsTable").innerHTML = `
+        <table>
+          <thead><tr><th>Column A</th><th>Column B</th><th>Correlation</th><th>Type</th><th>Note</th></tr></thead>
+          <tbody>${rows || `<tr><td colspan="5">No strong relationships detected.</td></tr>`}</tbody>
+        </table>
+      `;
+    }
+
+    function queryCard(query, index) {
+      return `
+        <article class="query-card" style="animation-delay:${Math.min(index * 45, 360)}ms">
+          <strong>${escapeHtml(query.question)}</strong>
+          <div class="query-head"><span>pandas</span><button data-copy="${escapeHtml(query.pandas_query)}">Copy</button></div>
+          <pre>${escapeHtml(query.pandas_query)}</pre>
+          <div class="query-head"><span>SQL</span><button data-copy="${escapeHtml(query.sql_query)}">Copy</button></div>
+          <pre>${escapeHtml(query.sql_query)}</pre>
+        </article>
+      `;
+    }
+
+    function renderOverview() {
+      const readiness = state.readiness || {};
+      const deductions = (readiness.deductions || []).map(item => `<li>${escapeHtml(item.reason)} (${escapeHtml(item.points)} pts)</li>`).join("");
+      const queryCards = (state.query_suggestions || []).map(queryCard).join("");
+      document.getElementById("overviewPanel").innerHTML = `
+        <section class="score-card">
+          <div class="score">${escapeHtml(readiness.score ?? 0)}</div>
+          <div class="grade">Grade ${escapeHtml(readiness.grade || "N/A")}</div>
+          <p>${escapeHtml(readiness.summary || "")}</p>
+          <ul>${deductions || "<li>No deductions.</li>"}</ul>
+        </section>
+        <section class="query-grid">${queryCards || `<div class="empty">No query suggestions returned.</div>`}</section>
+      `;
+    }
+
+    function render() {
+      if (!state) {
+        document.querySelector("main").innerHTML = `<section class="empty">No DataLens result found. Go back to the upload screen and analyse a dataset.</section>`;
+        return;
+      }
+      const title = state.metadata?.filename || "DataLens Results";
+      document.getElementById("title").textContent = title;
+      document.getElementById("sideTitle").textContent = title;
+      renderStats();
+      renderColumns();
+      renderRelationships();
+      renderOverview();
+    }
+
+    document.addEventListener("click", event => {
+      const tab = event.target.closest("[data-tab]");
+      if (tab) {
+        document.querySelectorAll(".tab, .view").forEach(el => el.classList.remove("active"));
+        tab.classList.add("active");
+        document.getElementById(tab.dataset.tab).classList.add("active");
+      }
+
+      const copy = event.target.closest("[data-copy]");
+      if (copy) navigator.clipboard.writeText(copy.dataset.copy || "");
+
+      const exportButton = event.target.closest("[data-export]");
+      if (exportButton && state?.metadata?.session_id) {
+        fetch(`/export/${state.metadata.session_id}/${exportButton.dataset.export}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify(state)
+        })
+          .then(response => response.blob())
+          .then(blob => {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `datalens_${state.metadata.session_id}.${exportButton.dataset.export === "excel" ? "xlsx" : exportButton.dataset.export}`;
+            link.click();
+            URL.revokeObjectURL(url);
+          });
+      }
+    });
+
+    document.addEventListener("blur", event => {
+      const editable = event.target.closest("[contenteditable][data-index]");
+      if (!editable) return;
+      const profile = state.profiles[Number(editable.dataset.index)];
+      profile[editable.dataset.field] = editable.textContent.trim();
+      persist();
+    }, true);
+
+    const canvas = document.getElementById("mesh");
+    const ctx = canvas.getContext("2d");
+    let bars = [];
+    function resizeMesh() {
+      canvas.width = window.innerWidth * devicePixelRatio;
+      canvas.height = window.innerHeight * devicePixelRatio;
+      bars = Array.from({ length: 44 }, (_, i) => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        h: (30 + Math.random() * 110) * devicePixelRatio,
+        speed: (.35 + Math.random() * .8) * devicePixelRatio,
+        color: ["rgba(0,166,200,.28)", "rgba(255,107,74,.2)", "rgba(167,209,41,.22)", "rgba(124,92,255,.18)"][i % 4]
+      }));
+    }
+    function drawMesh() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      bars.forEach(bar => {
+        bar.y += bar.speed;
+        if (bar.y > canvas.height + bar.h) {
+          bar.y = -bar.h;
+          bar.x = Math.random() * canvas.width;
+        }
+        ctx.fillStyle = bar.color;
+        ctx.fillRect(bar.x, bar.y, 3 * devicePixelRatio, bar.h);
+      });
+      requestAnimationFrame(drawMesh);
+    }
+    resizeMesh();
+    drawMesh();
+    window.addEventListener("resize", resizeMesh);
+    render();
+  </script>
+</body>
+</html>
