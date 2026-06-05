@@ -400,6 +400,10 @@
       animation: recordIn 240ms cubic-bezier(.2,.8,.2,1) both;
     }
 
+    .mini-card.expanded > p {
+      display: none;
+    }
+
     .column-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -435,7 +439,7 @@
       white-space: nowrap;
     }
 
-    .badge.confirmed, .badge.low, .badge.on { background: rgba(167,209,41,.26); color: #344200; }
+    .badge.confirmed, .badge.low, .badge.on { background: rgba(167,209,41,.26); color: #ffffff; }
     .badge.review, .badge.medium, .badge.single { background: rgba(246,183,60,.24); color: #6b4200; }
     .badge.fallback, .badge.high, .badge.off { background: rgba(255,107,74,.18); color: #802514; }
     .badge.neutral { background: rgba(0,166,200,.14); color: #005a6c; }
@@ -1313,7 +1317,7 @@
         return `
           <article class="column-card">
             <div class="column-head">
-              <h2 contenteditable="true" data-index="${index}" data-field="display_name">${escapeHtml(profile.display_name || profile.column_name)}</h2>
+              <h2 contenteditable="false" data-index="${index}" data-field="display_name">${escapeHtml(profile.display_name || profile.column_name)}</h2>
               <span class="badge ${confidenceClass(profile.confidence)}">${escapeHtml(profile.confidence === "Single model" ? "Model review" : (profile.confidence || "Fallback"))}</span>
             </div>
             <div class="meta">
@@ -1322,7 +1326,7 @@
               <button class="info-chip" type="button" data-pop-title="${escapeHtml(uniqueInfo.title)}" data-pop-body="${escapeHtml(uniqueInfo.body)}">${escapeHtml(profile.unique_count)} unique</button>
               ${profile.domain ? `<button class="info-chip" type="button" data-pop-title="${escapeHtml(domainInfo.title)}" data-pop-body="${escapeHtml(domainInfo.body)}">${escapeHtml(profile.domain)}</button>` : ""}
             </div>
-            <div class="description" contenteditable="true" data-index="${index}" data-field="description">${escapeHtml(profile.description || "No description returned.")}</div>
+            <div class="description" contenteditable="false" data-index="${index}" data-field="description">${escapeHtml(profile.description || "No description returned.")}</div>
             ${profile.data_quality_note ? `<div class="notice info">${escapeHtml(profile.data_quality_note)}</div>` : ""}
             ${profile.anomaly_note ? `<div class="notice warn">${escapeHtml(profile.anomaly_note)}</div>` : ""}
             ${flag ? `<div class="notice danger">${escapeHtml(flag.eu_ai_act_article || "Governance review")}: ${escapeHtml(flag.reason || "")}</div>` : ""}
@@ -1613,7 +1617,7 @@
     });
 
     document.addEventListener("blur", event => {
-      const editable = event.target.closest("[contenteditable][data-index]");
+      const editable = event.target.closest("[contenteditable='true'][data-index]");
       if (!editable) return;
       const profile = state.profiles[Number(editable.dataset.index)];
       profile[editable.dataset.field] = editable.textContent.trim();
