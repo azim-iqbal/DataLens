@@ -51,11 +51,7 @@ def _is_valid_fernet_key(key: str) -> bool:
 
 
 def ensure_file_encryption_key() -> str:
-    """
-    Return a valid Fernet key. If .env lacks a valid key, generate one and
-    persist it to .env when possible. Falls back to an in-memory key if
-    writing fails.
-    """
+   
     from services.groq_keys import ensure_env_loaded
 
     ensure_env_loaded()
@@ -189,26 +185,7 @@ def _detect_pii_column(col_name: str) -> bool:
 
 
 def _anonymize_value(value: Any, col_name: str) -> Any:
-    """
-    Replaces sensitive real values with safe placeholders before they are
-    sent to any external AI API.
-
-    Rules (in order):
-      1. None / NaN  → kept as None (no info to leak)
-      2. Email       → "user@example.com"
-      3. Phone       → "+91-XXXXXXXXXX"
-      4. Aadhaar     → "XXXX-XXXX-XXXX"
-      5. PAN         → "ABCDE1234F"  (format-preserving placeholder)
-      6. URL         → "https://example.com"
-      7. IP address  → "0.0.0.0"
-      8. Multi-word string in a PII column (likely a person's name)
-         → one-way hash token so the AI still sees it's a text field
-      9. Single-word string in a PII column
-         → "[REDACTED]"
-     10. Numeric in a PII column (e.g. aadhaar stored as int)
-         → 0  (preserves dtype signal without leaking value)
-     11. Everything else → value unchanged (safe: product IDs, dates, etc.)
-    """
+    
     # Step 1 — nulls are safe
     if value is None:
         return None
@@ -265,20 +242,23 @@ def _anonymize_value(value: Any, col_name: str) -> Any:
 
 # ─── UPDATED: build_safe_payload ─────────────────────────────────────────────
 
-def build_safe_payload(df: pd.DataFrame, col: str) -> dict:
-    """
-    Build the metadata dict that gets sent to Gemini / Groq / Sarvam.
-
-    Change from original:
-      - sample_values are now passed through _anonymize_value() so no real
-        PII ever reaches an external AI API.
-      - pii_column flag added so the AI prompt can note sensitivity.
-      - Everything else (null_pct, unique_count, dtype) is unchanged —
-        those are aggregate statistics, never raw personal data.
-    """
+def build_safe_payload(df: pd.DataFrame, col: str, masked_columns: list[str] = []) -> dict:
+   
     series = df[col]
     non_null = series.dropna()
     sample_size = min(5, len(non_null))
+    masked_set = {str(column) for column in masked_columns or []}
+
+    if str(col) in masked_set:
+        return {
+            "column_name": str(col),
+            "dtype": str(series.dtype),
+            "sample_values": [],
+            "null_pct": round(float(series.isna().mean() * 100), 1),
+            "unique_count": int(non_null.nunique()),
+            "pii_column": True,
+            "masked": True,
+        }
 
     raw_samples = (
         non_null.sample(n=sample_size, random_state=42).tolist()

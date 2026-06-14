@@ -354,6 +354,148 @@
       padding: 0 24px 24px;
     }
     .processing.active { display: grid; }
+    .hidden { display: none !important; }
+    .privacy-panel {
+      padding: 28px;
+      border-radius: 18px;
+      background: rgba(15, 20, 28, 0.96);
+      color: #f2f5fb;
+      box-shadow: 0 34px 90px rgba(0, 0, 0, 0.3);
+      margin: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .privacy-panel h2 {
+      margin: 0.35rem 0 0.45rem;
+      font-size: clamp(24px, 3vw, 30px);
+      line-height: 1.1;
+      color: #f8fbff;
+    }
+    .privacy-copy p {
+      margin: 0;
+      color: #bec9e2;
+      max-width: 64ch;
+    }
+    .privacy-table-wrap {
+      overflow-x: auto;
+      margin-top: 22px;
+    }
+    .privacy-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 480px;
+      background: rgba(255,255,255,0.03);
+    }
+    .privacy-table th,
+    .privacy-table td {
+      padding: 16px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      text-align: left;
+      font-size: 14px;
+    }
+    .privacy-table th {
+      color: #8ea2c3;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 700;
+    }
+    .privacy-table tbody tr:hover {
+      background: rgba(255,255,255,0.05);
+    }
+    .privacy-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(250, 223, 99, 0.14);
+      color: #f9da76;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .toggle-switch {
+      position: relative;
+      display: inline-grid;
+      width: 44px;
+      height: 24px;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .toggle-switch span {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.16);
+      transition: background 180ms ease;
+    }
+    .toggle-switch span::after {
+      content: "";
+      position: absolute;
+      left: 3px;
+      top: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #ffffff;
+      transition: transform 180ms ease;
+    }
+    .toggle-switch input:checked + span {
+      background: #49d391;
+    }
+    .toggle-switch input:checked + span::after {
+      transform: translateX(20px);
+    }
+    .privacy-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 22px;
+      flex-wrap: wrap;
+    }
+    .privacy-actions button {
+      border: none;
+      border-radius: 12px;
+      padding: 13px 18px;
+      font-weight: 800;
+      cursor: pointer;
+      background: #00a6c8;
+      color: #fff;
+      transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+    .privacy-actions button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 32px rgba(0,0,0,0.15);
+    }
+    .privacy-actions button.secondary {
+      background: transparent;
+      color: #d7e0f4;
+      border: 1px solid rgba(255,255,255,0.14);
+    }
+    .privacy-actions button.secondary:hover {
+      background: rgba(255,255,255,0.04);
+    }
+    .privacy-header {
+      display: grid;
+      gap: 10px;
+    }
+    .privacy-header .kicker {
+      margin-bottom: 0;
+      color: #f7d87f;
+    }
+    .privacy-panel small {
+      display: block;
+      margin-top: 10px;
+      color: #9baaed;
+    }
+    .privacy-table td:last-child {
+      min-width: 90px;
+    }
+    .privacy-table td .column-name {
+      font-weight: 700;
+      color: #fff;
+    }
     .spinner {
       width: 40px;
       height: 40px;
@@ -461,6 +603,32 @@
               <span>Verifying fairness flags with Groq before final results</span>
             </div>
           </div>
+          <section id="privacyPanel" class="privacy-panel hidden" aria-label="Column privacy control">
+            <div class="privacy-header">
+              <div class="kicker">Step 2: Column Privacy Control</div>
+              <h2>Review columns before AI analysis</h2>
+              <div class="privacy-copy">
+                <p>Mark any sensitive columns to exclude them from AI analysis. Only column names and detected types are shown here.</p>
+              </div>
+            </div>
+            <div class="privacy-table-wrap">
+              <table class="privacy-table" aria-describedby="privacyHelp">
+                <thead>
+                  <tr>
+                    <th>Column</th>
+                    <th>Type</th>
+                    <th>Mask?</th>
+                  </tr>
+                </thead>
+                <tbody id="privacyRows"></tbody>
+              </table>
+            </div>
+            <div id="privacyHelp" class="privacy-copy"><small>The AI will receive metadata for unmasked columns only. Masked columns are excluded entirely from AI description generation.</small></div>
+            <div class="privacy-actions">
+              <button id="backButton" type="button" class="secondary">Back</button>
+              <button id="analyseButton" type="button">Proceed to Analysis</button>
+            </div>
+          </section>
         </section>
       </section>
     </main>
@@ -477,6 +645,12 @@
     const fileInput = document.getElementById("fileInput");
     const dropzone = document.getElementById("dropzone");
     const processing = document.getElementById("processing");
+
+    const privacyPanel = document.getElementById("privacyPanel");
+    const privacyRows = document.getElementById("privacyRows");
+    const analyseButton = document.getElementById("analyseButton");
+    const backButton = document.getElementById("backButton");
+    let selectedFile = null;
 
     fileInput.addEventListener("change", () => uploadFile(fileInput.files[0]));
     ["dragenter", "dragover"].forEach(name => dropzone.addEventListener(name, event => {
@@ -557,6 +731,7 @@
 
     async function uploadFile(file) {
       if (!file) return;
+      selectedFile = file;
       sessionStorage.removeItem("datalensResult");
       localStorage.removeItem("datalensResult");
       dropzone.classList.add("disabled");
@@ -564,7 +739,91 @@
       const formData = new FormData();
       formData.append("file", file);
       try {
-        const res = await fetch("/dictionary/analyse", {
+        const res = await fetch("/dictionary/preview", {
+          method: "POST",
+          body: formData,
+          credentials: "same-origin"
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Unable to preview dataset");
+        renderPrivacyControls(data.columns);
+      } catch (err) {
+        alert(err.message);
+        resetUploadState();
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function renderPrivacyControls(columns) {
+      processing.classList.remove("active");
+      dropzone.classList.add("hidden");
+      privacyPanel.classList.remove("hidden");
+      privacyRows.innerHTML = columns.map((column, index) => {
+        const checked = column.sensitive ? "checked" : "";
+        const badge = column.sensitive ? `<span class=\"privacy-badge\">Sensitive</span>` : "";
+        const safeName = escapeHtml(column.column_name);
+        const safeType = escapeHtml(column.dtype);
+        const safeAttrName = String(column.column_name)
+          .replace(/&/g, "&amp;")
+          .replace(/\"/g, "&#34;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/'/g, "&#39;");
+        return `
+          <tr>
+            <td>
+              <div class=\"column-name\">${safeName}</div>
+              ${badge}
+            </td>
+            <td>${safeType}</td>
+            <td>
+              <label class=\"toggle-switch\">
+                <input type=\"checkbox\" data-column=\"${safeAttrName}\" ${checked}>
+                <span aria-hidden=\"true\"></span>
+              </label>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function getMaskedColumns() {
+      return Array.from(privacyRows.querySelectorAll("input[type=checkbox]"))
+        .filter(input => input.checked)
+        .map(input => input.dataset.column);
+    }
+
+    function resetUploadState() {
+      dropzone.classList.remove("disabled");
+      processing.classList.remove("active");
+      dropzone.classList.remove("hidden");
+      privacyPanel.classList.add("hidden");
+      selectedFile = null;
+      privacyRows.innerHTML = "";
+      fileInput.value = "";
+    }
+
+    async function submitAnalysis() {
+      if (!selectedFile) return;
+      dropzone.classList.add("disabled");
+      analyseButton.disabled = true;
+      processing.classList.add("active");
+
+      const maskedColumns = getMaskedColumns();
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("masked_columns", maskedColumns.join(","));
+
+      try {
+        const res = await fetch("/dictionary/generate", {
           method: "POST",
           body: formData,
           credentials: "same-origin"
@@ -575,10 +834,16 @@
         window.location.href = "/results.html";
       } catch (err) {
         alert(err.message);
-        dropzone.classList.remove("disabled");
-        processing.classList.remove("active");
+        resetUploadState();
+      } finally {
+        analyseButton.disabled = false;
       }
     }
+
+    analyseButton.addEventListener("click", submitAnalysis);
+    backButton.addEventListener("click", () => {
+      resetUploadState();
+    });
 
     const canvas = document.getElementById("dataCanvas");
     const ctx = canvas.getContext("2d");
