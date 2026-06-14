@@ -6,14 +6,14 @@ from io import BytesIO
 from typing import List
 
 import pandas as pd
-from fastapi import APIRouter, Body, Cookie, File, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Body, Cookie, File, Form, HTTPException, Response, UploadFile
 from pydantic import BaseModel
 
 from services.ai_assistant_service import ai_provider_status, answer_audit_question
 from services.analysis_service import run_full_analysis, run_multi_table_analysis
 from services.dataset_service import DATA_DIR, UPLOAD_DIR, ensure_data_dirs
 from services.dictionary_cache import get_result, store_result, update_result
-from services.security_service import decrypt_to_memory, save_encrypted
+from services.security_service import _detect_pii_column, decrypt_to_memory, save_encrypted
 from routes.export import export_result
 
 
@@ -37,6 +37,14 @@ def _load_dataframe(file_bytes: bytes, filename: str) -> pd.DataFrame:
     if name.endswith(".csv"):
         return pd.read_csv(buffer)
     raise ValueError("Only CSV or Excel files are allowed")
+
+
+def _parse_masked_columns(masked_columns: str | None) -> list[str]:
+    return [
+        col.strip()
+        for col in (str(masked_columns or "") or "").split(",")
+        if col.strip()
+    ]
 
 
 def _history_db_path() -> str:
@@ -118,6 +126,7 @@ def _save_dictionary_history(result: dict, owner_session_id: str) -> None:
 async def analyse_dictionary(
     response: Response,
     file: UploadFile = File(...),
+    masked_columns: str = Form(""),
     datalens_history_session: str | None = Cookie(default=None, alias=HISTORY_COOKIE_NAME),
 ):
     ensure_data_dirs()
@@ -136,7 +145,8 @@ async def analyse_dictionary(
     if df.empty:
         raise HTTPException(status_code=400, detail="Dataset is empty")
 
-    result = await run_full_analysis(df, filename, encrypted_session_id)
+    masked_columns_list = _parse_masked_columns(masked_columns)
+    result = await run_full_analysis(df, filename, encrypted_session_id, masked_columns=masked_columns_list)
 
     store_result(encrypted_session_id, result)
     _save_dictionary_history(result, owner_session_id)
@@ -175,6 +185,64 @@ async def analyse_dictionary_multi(
 
     primary_filename = tables[0][0]
     result = await run_multi_table_analysis(tables, encrypted_session_id, primary_filename)
+    store_result(encrypted_session_id, result)
+    _save_dictionary_history(result, owner_session_id)
+    return result
+
+
+@router.post("/preview")
+async def preview_dictionary_columns(file: UploadFile = File(...)):
+    filename = file.filename or ""
+    if not filename.lower().endswith((".csv", ".xlsx", ".xls")):
+        raise HTTPException(status_code=400, detail="Only CSV or Excel files are allowed")
+
+    try:
+        file_bytes = await file.read()
+        df = _load_dataframe(file_bytes, filename)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Could not read dataset preview: {exc}")
+
+    if df.empty:
+        raise HTTPException(status_code=400, detail="Dataset is empty")
+
+    return {
+        "columns": [
+            {
+                "column_name": str(col),
+                "dtype": str(df[col].dtype),
+                "sensitive": _detect_pii_column(str(col)),
+            }
+            for col in df.columns
+        ]
+    }
+
+
+@router.post("/generate")
+async def generate_dictionary(
+    response: Response,
+    file: UploadFile = File(...),
+    masked_columns: str = Form(""),
+    datalens_history_session: str | None = Cookie(default=None, alias=HISTORY_COOKIE_NAME),
+):
+    ensure_data_dirs()
+    owner_session_id = _history_owner_id(datalens_history_session, response)
+    filename = file.filename or ""
+    if not filename.lower().endswith((".csv", ".xlsx", ".xls")):
+        raise HTTPException(status_code=400, detail="Only CSV or Excel files are allowed")
+
+    try:
+        encrypted_session_id, encrypted_path = save_encrypted(await file.read(), UPLOAD_DIR)
+        file_bytes = decrypt_to_memory(encrypted_path)
+        df = _load_dataframe(file_bytes, filename)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Could not read dataset securely: {exc}")
+
+    if df.empty:
+        raise HTTPException(status_code=400, detail="Dataset is empty")
+
+    masked_columns_list = _parse_masked_columns(masked_columns)
+    result = await run_full_analysis(df, filename, encrypted_session_id, masked_columns=masked_columns_list)
+
     store_result(encrypted_session_id, result)
     _save_dictionary_history(result, owner_session_id)
     return result

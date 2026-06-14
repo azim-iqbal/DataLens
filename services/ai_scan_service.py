@@ -249,11 +249,33 @@ def _apply_governance_description_hints(profile: dict) -> None:
         profile["description"] = description
 
 
-async def scan_all_columns(df: pd.DataFrame, profiles: list[dict]) -> list[dict]:
+async def scan_all_columns(
+    df: pd.DataFrame,
+    profiles: list[dict],
+    masked_columns: list[str] = [],
+) -> list[dict]:
+    print(f"DEBUG masked_columns received: {masked_columns}")
+    masked_set = {col.strip().lower() for col in (masked_columns or [])}
+
     for profile in profiles:
         column = profile.get("column_name")
         if column not in df.columns:
             continue
+
+        if str(column).strip().lower() in masked_set:
+            profile.update({
+                "display_name": profile.get("display_name") or str(column),
+                "description": "This column was masked by the user and excluded from AI analysis.",
+                "domain": None,
+                "data_quality_flag": "None",
+                "data_quality_note": "",
+                "confidence": "Masked",
+                "groq_description": None,
+                "disagreement": None,
+                "masked": True,
+            })
+            continue
+
         payload = build_safe_payload(df, column)
         gemini_result, groq_result = await asyncio.gather(
             describe_column_gemini(payload),
@@ -261,4 +283,6 @@ async def scan_all_columns(df: pd.DataFrame, profiles: list[dict]) -> list[dict]
         )
         profile.update(consensus_description(gemini_result, groq_result))
         _apply_governance_description_hints(profile)
+        profile["masked"] = False
+
     return profiles

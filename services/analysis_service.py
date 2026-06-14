@@ -30,10 +30,11 @@ async def run_full_analysis(
     df: pd.DataFrame,
     filename: str,
     session_id: str,
+    masked_columns: list[str] = [],
 ) -> dict[str, Any]:
     profiles = profile_dataset(df)
     schema_map = build_schema_intelligence(df)
-    profiles = await scan_all_columns(df, profiles)
+    profiles = await scan_all_columns(df, profiles, masked_columns)
     profiles = add_anomaly_notes(profiles, df)
     relationships = detect_relationships(df)
     redundant_columns = detect_redundant_columns(df)
@@ -42,6 +43,14 @@ async def run_full_analysis(
     quality_audit["outliers"] = outliers
 
     profiles = await asyncio.to_thread(flag_sensitive_columns, profiles, df)
+    
+    # Restore masked status — flag_sensitive_columns runs after masking
+    # and must not override user privacy decisions
+    for profile in profiles:
+        if profile.get("masked") is True:
+            profile["fairness_flag"] = None
+            profile["confidence"] = "Masked"
+            profile["description"] = "This column was masked by the user and excluded from AI analysis."
     column_dictionary = build_column_dictionary(profiles, schema_map, quality_audit, outliers)
     understanding = understand_dataset(df, profiles)
     governance = build_governance(column_dictionary, profiles, quality_audit)

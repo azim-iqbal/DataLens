@@ -1314,6 +1314,43 @@
         const nullInfo = metricExplainer("nulls", profile);
         const uniqueInfo = metricExplainer("unique", profile);
         const domainInfo = metricExplainer("domain", profile);
+ 
+        // ── Masked column card ──────────────────────────────────────────────
+        if (profile.masked === true || profile.confidence === "Masked") {
+          return `
+            <article class="column-card" style="border-color: rgba(124,92,255,.32); background: rgba(124,92,255,.06);">
+              <div class="column-head">
+                <h2 style="color: var(--muted);">${escapeHtml(profile.display_name || profile.column_name)}</h2>
+                <span class="badge" style="background: rgba(124,92,255,.18); color: #3d1a6b;">🔒 Masked</span>
+              </div>
+              <div class="meta">
+                <button class="info-chip" type="button"
+                  data-pop-title="${escapeHtml(dtypeInfo.title)}"
+                  data-pop-body="${escapeHtml(dtypeInfo.body)}">
+                  ${escapeHtml(profile.dtype)}
+                </button>
+                <button class="info-chip" type="button"
+                  data-pop-title="${escapeHtml(nullInfo.title)}"
+                  data-pop-body="${escapeHtml(nullInfo.body)}">
+                  ${escapeHtml(profile.null_pct)}% null
+                </button>
+                <button class="info-chip" type="button"
+                  data-pop-title="${escapeHtml(uniqueInfo.title)}"
+                  data-pop-body="${escapeHtml(uniqueInfo.body)}">
+                  ${escapeHtml(profile.unique_count)} unique
+                </button>
+              </div>
+              <div class="notice" style="background: rgba(124,92,255,.12); color: #3d1a6b; margin-top: 8px;">
+                🔒 You masked this column before analysis. No sample values or descriptions were sent to any AI model.
+              </div>
+              ${flag ? `<div class="notice warn" style="margin-top:8px;">
+                ⚠ Note: This column is also flagged as sensitive (${escapeHtml(flag.eu_ai_act_article || "Governance review")}) based on its name alone — no data was analysed.
+              </div>` : ""}
+            </article>
+          `;
+        }
+ 
+        // ── Normal column card (unchanged) ──────────────────────────────────
         return `
           <article class="column-card">
             <div class="column-head">
@@ -1338,7 +1375,6 @@
         `;
       }).join("") || `<div class="empty">No column profiles were returned.</div>`;
     }
-
     function renderQuality() {
       const audit = state.quality_audit || {};
       const findings = uniqueBy(qualityFindings(), item => `${item.severity || ""}-${item.title || item.column || item.column_name || ""}-${qualityExplanation(item)}`);
@@ -1511,6 +1547,12 @@
     }
 
     function render() {
+      console.log("PROFILES:", JSON.stringify(state.profiles?.map(p => ({
+    column_name: p.column_name,
+    masked: p.masked,
+    confidence: p.confidence,
+    description: p.description
+  })), null, 2));
       if (!state) {
         document.querySelector("main").innerHTML = `<section class="empty">No DataLens result found. Go back to the upload screen and analyse a dataset.</section>`;
         return;
