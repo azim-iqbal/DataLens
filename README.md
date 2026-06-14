@@ -128,7 +128,6 @@ Uploaded files are encrypted on disk using Fernet symmetric encryption and autom
 Being honest about where things are:
 
 - Deployment config (Render/Railway) — coming once the core is stable
-- Natural language chat interface — ask questions about your dataset in plain English
 - Schema evolution detection — upload two versions and see what changed
 - Mobile-responsive UI — currently desktop only
 - Column-level inline editing persisted across sessions
